@@ -87,7 +87,7 @@ console.log(result.value());
 
 ### 试一下
 
-fraction、fractionCompute、FractionNumber 已在作用域中。
+fraction、fractionCompute、FractionNumber 已在作用域中。请通过控制台查看结果。
 
 ```tsx | preview
 import React, { useState } from 'react';
