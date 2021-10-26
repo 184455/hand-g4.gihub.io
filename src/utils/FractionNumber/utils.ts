@@ -1,9 +1,9 @@
-import SecurityNumber from './SecurityNumber';
+import FractionNumber from './FractionNumber';
 
-type Num = string | number | SecurityNumber;
+type Num = string | number | FractionNumber;
 
-const tokenReg = /[()+-\/*]|\d+(\.\d+)*/g;
-const tokenValidReg = /^([()+-\/*]|\d+(\.\d+)?)$/;
+const tokenReg = /[+\-*/()]|[.\d]+/g;
+const tokenValidReg = /^([+\-*/()]|\d*\.?\d+)$/;
 const ErrorNumberReg = /\d+\.?\s+\.?\d+/;
 
 /**
@@ -11,22 +11,24 @@ const ErrorNumberReg = /\d+\.?\s+\.?\d+/;
  * @param num
  * @constructor
  */
-function security(num: Num): SecurityNumber {
-  if (num instanceof SecurityNumber) {
+function fraction(num: Num): FractionNumber {
+  if (num instanceof FractionNumber) {
     return num;
   }
   const number = typeof num === 'string' ? Number(num) : num;
-  if (isNaN(number)) {
-    return new SecurityNumber(NaN, NaN);
-  }
-  if (number === 0 || number === Infinity || number === -Infinity) {
-    return new SecurityNumber(number, 1);
+  if (
+    isNaN(number) ||
+    number === 0 ||
+    number === Infinity ||
+    number === -Infinity
+  ) {
+    return new FractionNumber(number, 1);
   }
   let denominator = 1;
   while ((number * denominator) % 1) {
     denominator *= 10;
   }
-  return new SecurityNumber(number * denominator, denominator);
+  return new FractionNumber(number * denominator, denominator);
 }
 
 /**
@@ -36,17 +38,17 @@ function security(num: Num): SecurityNumber {
  * @param num2 算子
  */
 function atomicCompute(num1: Num, operation: string, num2: Num) {
-  const x = security(num1);
-  const y = security(num2);
+  const x = fraction(num1);
+  const y = fraction(num2);
   switch (operation) {
     case '+':
       return x.add(y);
     case '-':
-      return x.subtract(y);
+      return x.sub(y);
     case '*':
-      return x.multiply(y);
+      return x.mul(y);
     case '/':
-      return x.divide(y);
+      return x.div(y);
   }
   throw Error(`unknown operation: ${operation}`);
 }
@@ -56,8 +58,8 @@ function atomicCompute(num1: Num, operation: string, num2: Num) {
  * @param tokens 表达式词法数组
  */
 function computeExpression(
-  tokens: Array<string | number | SecurityNumber>,
-): SecurityNumber {
+  tokens: Array<string | number | FractionNumber>,
+): FractionNumber {
   let lastComputeNumber;
   let lastOperation;
   const bracketStack: Array<number> = [];
@@ -70,13 +72,13 @@ function computeExpression(
     ) {
       continue;
     }
-    switch (true) {
-      case token === '(':
+    switch (token) {
+      case '(':
         bracketStack.push(i);
         break;
-      case token === ')':
+      case ')':
         if (bracketStack.length === 0) {
-          throw Error('unknown token: )');
+          throw Error('Unexpected token: )');
         }
         const lastBracket = bracketStack.pop();
         if (bracketStack.length === 0 && typeof lastBracket === 'number') {
@@ -88,26 +90,26 @@ function computeExpression(
           i = lastBracket - 1;
         }
         break;
-      case token === '*':
+      case '*':
         if (!!lastOperation || lastComputeNumber === undefined) {
-          throw Error('unknown token: *');
+          throw Error('Unexpected token: *');
         }
         lastOperation = '*';
         break;
-      case token === '/':
+      case '/':
         if (!!lastOperation || lastComputeNumber === undefined) {
-          throw Error('unknown token: /');
+          throw Error('Unexpected token: /');
         }
         lastOperation = '/';
         break;
-      case token === '+':
+      case '+':
         if (!!lastOperation || (!lastOperation && !lastComputeNumber)) {
-          curTokens.splice(i, 1, security(1), '*');
+          curTokens.splice(i, 1, fraction(1), '*');
           i -= 1;
           break;
         }
         if (!!lastOperation || lastComputeNumber === undefined) {
-          throw Error('unknown token: +');
+          throw Error('Unexpected token: +');
         }
         lastOperation = '+';
         curTokens.splice(
@@ -116,20 +118,21 @@ function computeExpression(
           computeExpression(curTokens.slice(i + 1, curTokens.length)),
         );
         break;
-      case token === '-':
+      case '-':
         if (!!lastOperation || (!lastOperation && !lastComputeNumber)) {
-          curTokens.splice(i, 1, security(-1), '*');
+          curTokens.splice(i, 1, fraction(-1), '*');
           i -= 1;
           break;
         }
         if (!!lastOperation || lastComputeNumber === undefined) {
-          throw Error('unknown token: -');
+          throw Error('Unexpected token: -');
         }
-        lastOperation = '-';
+        lastOperation = '+';
         curTokens.splice(
-          i + 1,
+          i,
           curTokens.length - i,
-          computeExpression(curTokens.slice(i + 1, curTokens.length)),
+          '+',
+          computeExpression(curTokens.slice(i, curTokens.length)),
         );
         break;
       default:
@@ -143,9 +146,9 @@ function computeExpression(
           lastOperation = undefined;
           lastComputeNumber = undefined;
         } else if (lastComputeNumber !== undefined) {
-          throw Error(`unknown token: ${lastComputeNumber}`);
+          throw Error(`Unexpected token: ${lastComputeNumber}`);
         } else if (lastOperation !== undefined) {
-          throw Error(`unknown token: ${lastOperation}`);
+          throw Error(`Unexpected token: ${lastOperation}`);
         } else {
           lastComputeNumber = token;
         }
@@ -153,14 +156,14 @@ function computeExpression(
     }
   }
   if (bracketStack.length > 0) {
-    throw Error('bracket break');
+    throw Error('Missing close bracket');
   }
   const result = curTokens[0];
   if (typeof result === 'string') {
-    return security(Number(result));
+    return fraction(Number(result));
   }
   if (typeof result === 'number') {
-    return security(result);
+    return fraction(result);
   }
   return result;
 }
@@ -170,17 +173,17 @@ function computeExpression(
  * @param template 计算表达式
  * @param args 插值
  */
-function compute(
+function fractionCompute(
   template: TemplateStringsArray | string,
-  ...args: Array<number | SecurityNumber>
-): SecurityNumber {
+  ...args: Array<number | FractionNumber>
+): FractionNumber {
   const strings = typeof template === 'string' ? [template] : template;
-  const tokens: Array<string | number | SecurityNumber> = [];
+  const tokens: Array<string | number | FractionNumber> = [];
   for (let i = 0; i < strings.length; i++) {
     const templateString = strings[i];
     if (ErrorNumberReg.test(templateString)) {
       throw Error(
-        `unknown token: ${templateString.match(ErrorNumberReg)?.[0]}`,
+        `Unexpected token: ${templateString.match(ErrorNumberReg)?.[0]}`,
       );
     }
     const otherChars = templateString
@@ -193,15 +196,15 @@ function compute(
       tokens.push(args[i]);
     }
     if (otherChars !== '') {
-      throw Error(`unknown token: ${otherChars}`);
+      throw Error(`Unexpected token: ${otherChars}`);
     }
   }
   tokens.forEach((token) => {
     if (typeof token === 'string' && !tokenValidReg.test(token)) {
-      throw Error(`unknown token: ${token}`);
+      throw Error(`Unexpected token: ${token}`);
     }
   });
   return computeExpression(tokens);
 }
 
-export { security, compute };
+export { fraction, fractionCompute };
