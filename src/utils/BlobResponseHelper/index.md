@@ -12,7 +12,7 @@ nav:
 
 #### BlobResponseHelper 是什么？
 
-BlobResponseHelper 是一个用于处理 HTTP 响应的工具类，且只针对响应体为 blob 类型的请求。它提供了一系列处理 blob 数据的方法，总共可以分为两种：将 blob 数据转换为其他类型的数据、下载 blob 数据。
+BlobResponseHelper 是一个用于处理 HTTP 响应的工具类，且只针对响应体为 blob 类型的请求。它提供了一系列处理 blob 数据的方法，包括将 blob 数据转换为其他类型的数据和下载 blob 数据。
 
 #### 何时使用 BlobResponseHelper？
 
