@@ -1,14 +1,13 @@
 ---
 title: BlobResponseHelper
 order: 1
+toc: menu
 nav:
   title: Utils
   order: 2
 ---
 
-## BlobResponseHelper
-
-### 介绍
+## 介绍
 
 #### BlobResponseHelper 是什么？
 
@@ -19,7 +18,7 @@ BlobResponseHelper 是一个用于处理 HTTP 响应的工具类，且只针对�
 - 需要下载通过 AJAX 下载文件时。BlobResponseHelper 提供了 blob 下载方法，且可以通过传入回调函数进行条件下载。
 - 需要在客户端处理 blob 数据时。BlobResponseHelper 允许将 blob 类型的响应数据转换为其他数据类型。
 
-### 创建 BlobResponseHelper 实例
+## 创建 BlobResponseHelper 实例
 
 BlobResponseHelper 提供了四种方式用于创建 BlobResponseHelper 实例：通过 URL 创建、通过 axios 创建、通过 XMLHttpRequest 创建、通过 fetch 创建。
 
@@ -66,7 +65,7 @@ BlobResponseHelper 提供了四种方式用于创建 BlobResponseHelper 实例�
     BlobResponseHelper.fromFetchResponse(fetchResponse);
   ```
 
-### 将响应数据转为其他类型数据
+## 将响应数据转为其他类型数据
 
 BlobResponseHelper 提供了将响应 blob 数据转换为其他类型的方法，可转换类型包括：ArrayBuffer、JSON 解析数据、文本数据、ObjectURL、DataURL。获取这些数据时均为 Promise 包装后的结果。
 
@@ -77,7 +76,7 @@ blobResponseHelper.text().then((result) => console.log(result));
 blobResponseHelper.dataURL().then((result) => console.log(result));
 ```
 
-### 下载文件
+## 下载文件
 
 BlobResponseHelper 提供了直接下载响应数据的方法，下载文件的结果会返回为一个 Promise 对象。默认只有当 http 请求的状态码在 200~299 之间时才会下载，且返回的 Promise 对象状态为“成功”，其他情况均为“失败”。下载时允许传入一个回调函数用于自定义判断是否应该下载。
 
@@ -88,7 +87,7 @@ blobResponseHelper
   .catch(() => alert('下载失败'));
 ```
 
-### Demo
+## Demo
 
 ```tsx | preview
 import React, { useState } from 'react';
@@ -141,7 +140,7 @@ export default () => {
 };
 ```
 
-### API
+## API
 
 #### BlobResponseHelper
 

@@ -1,0 +1,105 @@
+.wrapper {
+  background-color: #fff;
+  display: flex;
+  border: 1px solid #ebedf1;
+
+  &.horizontal {
+    flex-direction: row;
+    overflow-x: hidden;
+
+    > .draggable-box > .divider {
+      top: 0;
+      right: 0;
+      height: 100%;
+      width: 1px;
+      cursor: col-resize;
+      transform: translateX(50%);
+
+      &::after {
+        top: 0;
+        right: 50%;
+        height: 100%;
+        width: 4px;
+        transform: translateX(50%);
+      }
+    }
+  }
+
+  &.vertical {
+    flex-direction: column;
+    overflow-y: hidden;
+
+    > .draggable-box > .divider {
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 1px;
+      cursor: row-resize;
+      transform: translateY(50%);
+
+      &::after {
+        left: 0;
+        bottom: 50%;
+        width: 100%;
+        height: 4px;
+        transform: translateY(50%);
+      }
+    }
+  }
+
+  .draggable-box {
+    position: relative;
+
+    &,
+    &.dragging {
+      > .divider.normal-divider::after {
+        background-color: transparent;
+      }
+    }
+
+    .divider {
+      background-color: #ebedf1;
+      position: absolute;
+      z-index: 1;
+      margin: 0;
+      padding: 0;
+      border: none;
+      overflow: visible;
+
+      &::after {
+        display: block;
+        content: '';
+        background-color: transparent;
+        transition: all 0.3s;
+        position: absolute;
+        z-index: 2;
+      }
+    }
+
+    &.dragging > .divider,
+    .divider:hover {
+      z-index: 2;
+
+      &::after {
+        z-index: 3;
+        background-color: #528bff;
+      }
+    }
+  }
+}
+
+.body-dragging {
+  user-select: none;
+
+  &.horizontal {
+    cursor: col-resize;
+  }
+
+  &.vertical {
+    cursor: row-resize;
+  }
+
+  *::selection {
+    all: inherit;
+  }
+}
