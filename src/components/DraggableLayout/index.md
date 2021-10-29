@@ -17,6 +17,8 @@ nav:
 
 ## 代码演示
 
+### 基本使用
+
 ```tsx | preview
 /**
  * title: 基本使用
@@ -53,6 +55,8 @@ function Index() {
 export default Index;
 ```
 
+### 初始化宽度
+
 ```tsx | preview
 /**
  * title: 初始化宽度
@@ -88,6 +92,8 @@ function Index() {
 
 export default Index;
 ```
+
+### 限制最大/最小宽度
 
 ```tsx | preview
 /**
@@ -126,6 +132,8 @@ function Index() {
 
 export default Index;
 ```
+
+### 异步更新列宽
 
 ```tsx | preview
 /**
@@ -166,6 +174,8 @@ function Index() {
 export default Index;
 ```
 
+### 垂直布局
+
 ```tsx | preview
 /**
  * title: 垂直布局
@@ -201,6 +211,8 @@ function Index() {
 
 export default Index;
 ```
+
+### 嵌套使用
 
 ```tsx | preview
 /**
@@ -257,6 +269,8 @@ function Index() {
 export default Index;
 ```
 
+### 响应父容器尺寸变化
+
 ```tsx | preview
 /**
  * title: 响应父容器尺寸变化
@@ -293,17 +307,17 @@ function Index() {
 export default Index;
 ```
 
-### API
+## API
 
-#### Layout
+### Layout
 
 <API src="./Layout.tsx" hideTitle></API>
 
-#### Wrapper
+### Wrapper
 
 <API src="./Wrapper.tsx" hideTitle></API>
 
-#### 关于权重、像素和百分比
+### 关于权重、像素和百分比
 
 - 权重：设为初始宽/高度时，子容器的初始宽/高度会根据父容器的剩余宽/高度按权分配，父容器的尺寸变化会按子容器当前宽/高度等比分配给子容器。
 - 像素：设为初始宽/高度时表示固定初始值，父容器调整尺寸不会影响子容器。设为最大/小宽高时表示固定最大/小值。

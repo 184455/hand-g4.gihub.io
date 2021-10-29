@@ -9,11 +9,11 @@ nav:
 
 ## 介绍
 
-#### BlobResponseHelper 是什么？
+### BlobResponseHelper 是什么？
 
 BlobResponseHelper 是一个用于处理 HTTP 响应的工具类，且只针对响应体为 blob 类型的请求。它提供了一系列处理 blob 数据的方法，包括将 blob 数据转换为其他类型的数据和下载 blob 数据。
 
-#### 何时使用 BlobResponseHelper？
+### 何时使用 BlobResponseHelper？
 
 - 需要下载通过 AJAX 下载文件时。BlobResponseHelper 提供了 blob 下载方法，且可以通过传入回调函数进行条件下载。
 - 需要在客户端处理 blob 数据时。BlobResponseHelper 允许将 blob 类型的响应数据转换为其他数据类型。
@@ -22,48 +22,54 @@ BlobResponseHelper 是一个用于处理 HTTP 响应的工具类，且只针对�
 
 BlobResponseHelper 提供了四种方式用于创建 BlobResponseHelper 实例：通过 URL 创建、通过 axios 创建、通过 XMLHttpRequest 创建、通过 fetch 创建。
 
-- 根据 URL 创建。BlobResponseHelper 允许直接从文件下载地址创建。
+### 根据 URL 创建
 
-  ```javascript
-  const blobResponseHelper = BlobResponseHelper.fromURL(
-    'https://picsum.photos/200/300',
-  );
-  ```
+BlobResponseHelper 允许直接从文件下载地址创建。
 
-- 通过 axios 创建。根据 axios 创建实例时，需要将 axios 请求的响应对象或被 Promise 包装过的该对象传入静态方法 fromAxiosResponse()中。注意需要将 axios 请求的 responseType 设为 blob。
+```javascript
+const blobResponseHelper = BlobResponseHelper.fromURL(
+  'https://picsum.photos/200/300',
+);
+```
 
-  ```javascript
-  // 发送一个axios请求，且需要将responseType设为blob
-  const axiosResponse = axios(
-    `https://picsum.photos/200/300?random=${Date.now()}`,
-    {
-      responseType: 'blob',
-    },
-  );
-  // 根据axios响应对象创建BlobResponseHelper实例
-  const blobResponseHelper =
-    BlobResponseHelper.fromAxiosResponse(axiosResponse);
-  ```
+### 通过 axios 创建
 
-- 通过 XMLHttpRequest 创建。根据 XMLHttpRequest 创建时，需要将 XMLHttpRequest 实例传入静态方法 fromXMLHttpRequest()中。注意需要将请求的 responseType 设为 blob 且不能设置 XMLHttpRequest 实例的 onload 属性，BlobResponseHelper 需要根据 onload 进行初始化。
+根据 axios 创建实例时，需要将 axios 请求的响应对象或被 Promise 包装过的该对象传入静态方法 fromAxiosResponse()中。注意需要将 axios 请求的 responseType 设为 blob。
 
-  ```javascript
-  const xhr = new XMLHttpRequest();
-  xhr.open('GET', `https://picsum.photos/200/300?random=${Date.now()}`);
-  xhr.responseType = 'blob';
-  xhr.send();
-  const blobResponseHelper = BlobResponseHelper.fromXMLHttpRequest(xhr);
-  ```
+```javascript
+// 发送一个axios请求，且需要将responseType设为blob
+const axiosResponse = axios(
+  `https://picsum.photos/200/300?random=${Date.now()}`,
+  {
+    responseType: 'blob',
+  },
+);
+// 根据axios响应对象创建BlobResponseHelper实例
+const blobResponseHelper = BlobResponseHelper.fromAxiosResponse(axiosResponse);
+```
 
-- 通过 fetch 创建。根据 fetch 请求创建时，只需将 fetch 请求的响应对象或被 Promise 包装过的该对象传入 fromFetchResponse 方法即可，无需进行其他设置。
+### 通过 XMLHttpRequest 创建
 
-  ```javascript
-  const fetchResponse = fetch(
-    `https://picsum.photos/200/300?random=${Date.now()}`,
-  );
-  const blobResponseHelper =
-    BlobResponseHelper.fromFetchResponse(fetchResponse);
-  ```
+根据 XMLHttpRequest 创建时，需要将 XMLHttpRequest 实例传入静态方法 fromXMLHttpRequest()中。注意需要将请求的 responseType 设为 blob 且不能设置 XMLHttpRequest 实例的 onload 属性，BlobResponseHelper 需要根据 onload 进行初始化。
+
+```javascript
+const xhr = new XMLHttpRequest();
+xhr.open('GET', `https://picsum.photos/200/300?random=${Date.now()}`);
+xhr.responseType = 'blob';
+xhr.send();
+const blobResponseHelper = BlobResponseHelper.fromXMLHttpRequest(xhr);
+```
+
+### 通过 fetch 创建
+
+根据 fetch 请求创建时，只需将 fetch 请求的响应对象或被 Promise 包装过的该对象传入 fromFetchResponse 方法即可，无需进行其他设置。
+
+```javascript
+const fetchResponse = fetch(
+  `https://picsum.photos/200/300?random=${Date.now()}`,
+);
+const blobResponseHelper = BlobResponseHelper.fromFetchResponse(fetchResponse);
+```
 
 ## 将响应数据转为其他类型数据
 
@@ -142,9 +148,9 @@ export default () => {
 
 ## API
 
-#### BlobResponseHelper
+### BlobResponseHelper
 
-##### 静态方法
+#### 静态方法
 
 | 方法                        | 说明                                                 | 参数                                                           | 返回值                  |
 | --------------------------- | ---------------------------------------------------- | -------------------------------------------------------------- | ----------------------- |
@@ -153,7 +159,7 @@ export default () => {
 | fromXMLHttpRequest(xhr)     | 根据 XMLHttpRequest 实例创建 BlobResponseHelper 实例 | 接收 XMLHttpRequest 实例作为参数                               | BlobResponseHelper 实例 |
 | fromFetchResponse(response) | 根据 fetch 请求实例化 BlobResponseHelper             | 接收 fetch 的响应对象或一个返回响应对象的 Promise 对象作为参数 | BlobResponseHelper 实例 |
 
-##### 实例方法
+#### 实例方法
 
 | 方法              | 说明                                                                                                      | 参数                                                                                                                                                                                                                                     | 返回值                                                                                                                        |
 | ----------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
@@ -170,11 +176,11 @@ export default () => {
 | dataURL()         | 返回 blob 数据的 dataURL                                                                                  |                                                                                                                                                                                                                                          | 返回一个 Promise 包装的 URL 字符串                                                                                            |
 | download(options) | 下载 blob 文件，下载文件的文件名优先使用 options 中配置的文件名，其次是响应头中的文件名和内置的默认文件名 | options 包含两个可选属性：filename、shouldDownload。filename 表示文件名；shouldDownload 是一个回调函数，用于判断是否应该进行本次下载，它将接收状态码、请求头、请求体三个参数，返回一个布尔值；shouldDownload 也可以是 true，表示总是下载 | 返回一个 Promise 对象。如果进行了下载那么 Promise 对象的状态为”成功“，反之则为“失败”。失败时将返回 BlobReponseHelper 实力自身 |
 
-#### BlobHelper
+### BlobHelper
 
 BlobHelper 是用于直接处理 blob 对象的工具类，BlobResponseHelper 基于此类实现。
 
-##### 静态方法
+#### 静态方法
 
 BlobHelper 提供了一系列用于构造 BlobHelper 实例的静态方法。这些方法均会将传入的参数转为 Blob 类型。
 
@@ -186,7 +192,7 @@ BlobHelper 提供了一系列用于构造 BlobHelper 实例的静态方法。这
 | fromDataURL(dataURL)                   | 根据 dataURL 构建 BlobHelper 实例            | 一个表示 dataURL 的字符串                                              | BlobHelper 实例 |
 | fromText(text)                         | 根据文本字符串构建 BlobHelper 实例           | 文本字符串                                                             | BlobHelper 实例 |
 
-##### 实例方法
+#### 实例方法
 
 | 方法               | 说明                                                       | 参数                   | 返回值                          |
 | ------------------ | ---------------------------------------------------------- | ---------------------- | ------------------------------- |
