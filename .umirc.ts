@@ -1,6 +1,6 @@
 import { defineConfig } from 'dumi';
 
-const repo = 'dumi-demo';
+const repo = 'hand-g4.gihub.io';
 
 export default defineConfig({
   title: 'dumi-demo',
