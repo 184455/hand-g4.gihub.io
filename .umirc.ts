@@ -1,18 +1,22 @@
+const path = require('path');
 import { defineConfig } from 'dumi';
 
 const repo = 'hand-g4.gihub.io';
 
 export default defineConfig({
-  title: 'dumi-demo',
-  favicon:
-    'https://user-images.githubusercontent.com/9554297/83762004-a0761b00-a6a9-11ea-83b4-9c8ff721d4b8.png',
-  logo: 'https://user-images.githubusercontent.com/9554297/83762004-a0761b00-a6a9-11ea-83b4-9c8ff721d4b8.png',
+  // 详细配置: https://d.umijs.org/config
+  title: '前端四组',
+  favicon: '/hand-logo.png', // 默认会指向项目根目录 /public
+  logo: '/hand-logo.png', // 默认会指向项目根目录 /public
   outputPath: 'docs-dist',
   mode: 'site',
-  // more config: https://d.umijs.org/config
   base: `/${repo}/`,
-  publicPath: `/${repo}/`,
+  publicPath: process.env.NODE_ENV === 'production' ? `/${repo}/` : '/',
+  styles: [`.__dumi-default-navbar-logo { background-size: 30% !important; }`],
   resolve: {
     passivePreview: true,
+  },
+  alias: {
+    '@/': path.resolve(__dirname, './src/'),
   },
 });
