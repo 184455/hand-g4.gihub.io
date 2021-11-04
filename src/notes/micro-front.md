@@ -1,10 +1,6 @@
 ---
-title: 如何实现微前端
+title: 1、如何实现微前端
 order: 1
-toc: menu
-nav:
-  title: Notes
-  order: 3
 ---
 
 ## 什么是微前端?

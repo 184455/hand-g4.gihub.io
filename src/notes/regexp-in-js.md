@@ -1,7 +1,6 @@
 ---
-title: 如何在JS中使用正则表达式
+title: 2、如何在JS中使用正则？
 order: 2
-toc: menu
 ---
 
 ## 创建正则表达式对象
