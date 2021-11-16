@@ -1,10 +1,8 @@
 import FractionNumber from './FractionNumber';
+import parseTokens, { Token, TOKEN_TYPE } from './Lexer';
+import parser, { AstNode, NODE_TYPE } from './Parser';
 
 type Num = string | number | FractionNumber;
-
-const tokenReg = /[+\-*/()]|[.\d]+/g;
-const tokenValidReg = /^([+\-*/()]|\d*\.?\d+)$/;
-const ErrorNumberReg = /\d+\.?\s+\.?\d+/;
 
 /**
  * 将一个数值包装为分数
@@ -32,140 +30,31 @@ function fraction(num: Num): FractionNumber {
 }
 
 /**
- * 原子计算
- * @param num1 算子
- * @param operation 运算符
- * @param num2 算子
+ * 递归计算抽象语法树
+ * @param astNode 抽象语法树
  */
-function atomicCompute(num1: Num, operation: string, num2: Num) {
-  const x = fraction(num1);
-  const y = fraction(num2);
-  switch (operation) {
-    case '+':
-      return x.add(y);
-    case '-':
-      return x.sub(y);
-    case '*':
-      return x.mul(y);
-    case '/':
-      return x.div(y);
+function astTreeCompute(astNode: AstNode): FractionNumber {
+  switch (astNode.type) {
+    case NODE_TYPE.NUMBER:
+      return fraction(astNode.value);
+    case NODE_TYPE.ADD:
+      return astTreeCompute(astNode.children[0]).add(
+        astTreeCompute(astNode.children[1]),
+      );
+    case NODE_TYPE.SUB:
+      return astTreeCompute(astNode.children[0]).sub(
+        astTreeCompute(astNode.children[1]),
+      );
+    case NODE_TYPE.MUL:
+      return astTreeCompute(astNode.children[0]).mul(
+        astTreeCompute(astNode.children[1]),
+      );
+    case NODE_TYPE.DIV:
+      return astTreeCompute(astNode.children[0]).div(
+        astTreeCompute(astNode.children[1]),
+      );
   }
-  throw Error(`unknown operation: ${operation}`);
-}
-
-/**
- * 对一个表达式进行计算
- * @param tokens 表达式词法数组
- */
-function computeExpression(
-  tokens: Array<string | number | FractionNumber>,
-): FractionNumber {
-  let lastComputeNumber;
-  let lastOperation;
-  const bracketStack: Array<number> = [];
-  const curTokens = tokens.slice();
-  for (let i = 0; i < curTokens.length; i++) {
-    const token = curTokens[i];
-    if (
-      bracketStack.length > 0 &&
-      (typeof token !== 'string' || !/[()]/.test(token))
-    ) {
-      continue;
-    }
-    switch (token) {
-      case '(':
-        bracketStack.push(i);
-        break;
-      case ')':
-        if (bracketStack.length === 0) {
-          throw Error('Unexpected token: )');
-        }
-        const lastBracket = bracketStack.pop();
-        if (bracketStack.length === 0 && typeof lastBracket === 'number') {
-          curTokens.splice(
-            lastBracket,
-            i - lastBracket + 1,
-            computeExpression(curTokens.slice(lastBracket + 1, i)),
-          );
-          i = lastBracket - 1;
-        }
-        break;
-      case '*':
-        if (!!lastOperation || lastComputeNumber === undefined) {
-          throw Error('Unexpected token: *');
-        }
-        lastOperation = '*';
-        break;
-      case '/':
-        if (!!lastOperation || lastComputeNumber === undefined) {
-          throw Error('Unexpected token: /');
-        }
-        lastOperation = '/';
-        break;
-      case '+':
-        if (!!lastOperation || (!lastOperation && !lastComputeNumber)) {
-          curTokens.splice(i, 1, fraction(1), '*');
-          i -= 1;
-          break;
-        }
-        if (!!lastOperation || lastComputeNumber === undefined) {
-          throw Error('Unexpected token: +');
-        }
-        lastOperation = '+';
-        curTokens.splice(
-          i + 1,
-          curTokens.length - i,
-          computeExpression(curTokens.slice(i + 1, curTokens.length)),
-        );
-        break;
-      case '-':
-        if (!!lastOperation || (!lastOperation && !lastComputeNumber)) {
-          curTokens.splice(i, 1, fraction(-1), '*');
-          i -= 1;
-          break;
-        }
-        if (!!lastOperation || lastComputeNumber === undefined) {
-          throw Error('Unexpected token: -');
-        }
-        lastOperation = '+';
-        curTokens.splice(
-          i,
-          curTokens.length - i,
-          '+',
-          computeExpression(curTokens.slice(i, curTokens.length)),
-        );
-        break;
-      default:
-        if (!!lastOperation && lastComputeNumber !== undefined) {
-          curTokens.splice(
-            i - 2,
-            3,
-            atomicCompute(lastComputeNumber, lastOperation, token),
-          );
-          i -= 3;
-          lastOperation = undefined;
-          lastComputeNumber = undefined;
-        } else if (lastComputeNumber !== undefined) {
-          throw Error(`Unexpected token: ${lastComputeNumber}`);
-        } else if (lastOperation !== undefined) {
-          throw Error(`Unexpected token: ${lastOperation}`);
-        } else {
-          lastComputeNumber = token;
-        }
-        break;
-    }
-  }
-  if (bracketStack.length > 0) {
-    throw Error('Missing close bracket');
-  }
-  const result = curTokens[0];
-  if (typeof result === 'string') {
-    return fraction(Number(result));
-  }
-  if (typeof result === 'number') {
-    return fraction(result);
-  }
-  return result;
+  throw Error(`unknown operation: ${astNode.type}`);
 }
 
 /**
@@ -177,34 +66,19 @@ function fractionCompute(
   template: TemplateStringsArray | string,
   ...args: Array<number | FractionNumber>
 ): FractionNumber {
-  const strings = typeof template === 'string' ? [template] : template;
-  const tokens: Array<string | number | FractionNumber> = [];
-  for (let i = 0; i < strings.length; i++) {
-    const templateString = strings[i];
-    if (ErrorNumberReg.test(templateString)) {
-      throw Error(
-        `Unexpected token: ${templateString.match(ErrorNumberReg)?.[0]}`,
-      );
-    }
-    const otherChars = templateString
-      .replace(/\s/g, '')
-      .replace(tokenReg, (value) => {
-        tokens.push(value);
-        return '';
-      });
+  const templateArr = typeof template === 'string' ? [template] : template;
+  const tokens: Token[] = [];
+  for (let i = 0; i < templateArr.length; i++) {
+    tokens.push(...parseTokens(templateArr[i]));
     if (args[i] !== undefined) {
-      tokens.push(args[i]);
-    }
-    if (otherChars !== '') {
-      throw Error(`Unexpected token: ${otherChars}`);
+      tokens.push({
+        type: TOKEN_TYPE.NUMBER,
+        token: args[i] as any,
+      });
     }
   }
-  tokens.forEach((token) => {
-    if (typeof token === 'string' && !tokenValidReg.test(token)) {
-      throw Error(`Unexpected token: ${token}`);
-    }
-  });
-  return computeExpression(tokens);
+  const astTree = parser(tokens);
+  return astTreeCompute(astTree);
 }
 
 export { fraction, fractionCompute };
