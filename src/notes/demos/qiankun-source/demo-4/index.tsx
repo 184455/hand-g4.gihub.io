@@ -1,20 +1,20 @@
 import React, { useEffect } from 'react';
 import { registerMicroApps, start } from './mini-qiankun';
 
-function Demo2() {
+function Demo4() {
   useEffect(() => {
     registerMicroApps([
       {
         name: 'vue-demo',
         entry: 'https://linyun-git.github.io/mini-qiankun-demos/vue-demo/',
         container: '.container',
-        activeRule: '/hand-g4.gihub.io/~demos/qiankun-source-demo-2/vue-demo',
+        activeRule: '/hand-g4.gihub.io/~demos/qiankun-source-demo-4/vue-demo',
       },
       {
         name: 'react-demo',
         entry: 'https://linyun-git.github.io/mini-qiankun-demos/react-demo/',
         container: '.container',
-        activeRule: '/hand-g4.gihub.io/~demos/qiankun-source-demo-2/react-demo',
+        activeRule: '/hand-g4.gihub.io/~demos/qiankun-source-demo-4/react-demo',
       },
     ]);
     start();
@@ -28,7 +28,7 @@ function Demo2() {
     history.pushState(
       {},
       '',
-      '/hand-g4.gihub.io/~demos/qiankun-source-demo-2/vue-demo/#/',
+      '/hand-g4.gihub.io/~demos/qiankun-source-demo-4/vue-demo/#/',
     );
   };
 
@@ -36,12 +36,12 @@ function Demo2() {
     history.pushState(
       {},
       '',
-      '/hand-g4.gihub.io/~demos/qiankun-source-demo-2/react-demo/#/',
+      '/hand-g4.gihub.io/~demos/qiankun-source-demo-4/react-demo/#/',
     );
   };
 
   const handleToOtherPage = () => {
-    history.pushState({}, '', '/hand-g4.gihub.io/~demos/qiankun-source-demo-2');
+    history.pushState({}, '', '/hand-g4.gihub.io/~demos/qiankun-source-demo-4');
   };
 
   return (
@@ -57,4 +57,4 @@ function Demo2() {
   );
 }
 
-export default Demo2;
+export default Demo4;

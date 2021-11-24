@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { mountEntry } from './import-html-entry';
+import { mountEntry } from './mini-qiankun';
 
 const VUE_ENTRY = 'https://linyun-git.github.io/mini-qiankun-demos/vue-demo/';
 const REACT_ENTRY =
@@ -11,6 +11,10 @@ export default () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleMount = (entry: string) => {
+    if (!entry) {
+      [...containerRef.current!.children].forEach((child) => child.remove());
+      return;
+    }
     setMounting(true);
     const renderContainer = document.createElement('div');
     [...containerRef.current!.children].forEach((child) => child.remove());
@@ -34,6 +38,9 @@ export default () => {
       </button>
       <button disabled={mounting} onClick={() => handleMount(REACT_ENTRY)}>
         挂载React子应用
+      </button>
+      <button disabled={mounting} onClick={() => handleMount('')}>
+        卸载子应用
       </button>
       <div style={{ border: '1px solid red' }}>
         <h1>{error ? `Error: ${error}` : 'Container'}</h1>

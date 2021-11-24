@@ -1,5 +1,6 @@
 import { importEntry } from './import-html-entry';
 import { listenHistoryChange } from './listenHistory';
+import Sandbox from './Sandbox';
 
 enum APP_STATUS {
   NOT_LOADED = 'NOT_LOADED', // 尚未加载资源
@@ -17,6 +18,7 @@ interface SubApp {
   template: string; // 子应用html模板
   activeRule: string | (() => boolean); // 子应用激活路由
   container: string; // 子应用挂载容器
+  sandbox?: Sandbox; // 沙箱环境
   bootstrap(): Promise<null>; // 生命周期函数
   mount(): Promise<null>;
   unmount(): Promise<null>;
@@ -137,7 +139,11 @@ async function reroute(apps: SubApp[]) {
   await Promise.all(
     appsToLoad.map(async (app) => {
       const { template, execScripts } = await importEntry(app.entry);
-      const module = execScripts();
+      app.sandbox = new Sandbox(template);
+      (window as any).__INJECTED_PUBLIC_PATH_BY_QIANKUN__ = app.entry;
+      const module = execScripts({
+        document: app.sandbox.documentProxy,
+      });
       Object.assign(app, module, {
         template,
         status: APP_STATUS.NOT_BOOTSTRAPPED,
@@ -155,9 +161,10 @@ async function reroute(apps: SubApp[]) {
   // 要挂载的应用先将html模板插入页面再执行mount方法，以免找不到挂载节点
   await Promise.all(
     appsToMount.map(async (app) => {
-      const div = document.createElement('div');
-      div.innerHTML = app.template;
-      getContainer(app).appendChild(div);
+      if (!app.sandbox) {
+        app.sandbox = new Sandbox(app.template);
+      }
+      getContainer(app).appendChild(app.sandbox.mountRoot);
       await app.mount();
       Object.assign(app, {
         status: APP_STATUS.MOUNTED,

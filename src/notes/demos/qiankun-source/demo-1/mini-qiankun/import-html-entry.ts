@@ -1,9 +1,13 @@
 // 匹配指src和href属性，如 href="/favicon.ico"
 const HREF_REG = /(href|src)=(['"])(\S+?)\2/g;
+// 匹配head标签
+const HEAD_TAG = /<(head)(.*?\/)\1>/gis;
+// 匹配body标签
+const BODY_TAG = /<(body)(.*?\/)\1>/gis;
 // 匹配所有script标签
 const ALL_SCRIPT_REGEX = /<script.*?>(.*?)<\/script>/gis;
 // 匹配带src属性的script标签
-const SCRIPT_SRC_REG = /\ssrc=(['"])(\S+)\1/i;
+const SCRIPT_SRC_REG = /\ssrc=(['"])\s*?(\S+)\s*?\1/i;
 
 // 将资源地址解析为带域信息的地址
 function getEntirePath(href: string, entry: string) {
@@ -12,9 +16,17 @@ function getEntirePath(href: string, entry: string) {
 
 async function getEntryHTML(entry: string): Promise<string> {
   const html = await fetch(entry).then((rep) => rep.text());
-  return html.replace(HREF_REG, ($0, $1, $2, $3) => {
-    return `${$1}=${$2}${getEntirePath($3, entry)}${$2}`;
-  });
+  (window as any).__INJECTED_PUBLIC_PATH_BY_QIANKUN__ = entry;
+  return html
+    .replace(HREF_REG, ($0, $1, $2, $3) => {
+      return `${$1}=${$2}${getEntirePath($3, entry)}${$2}`;
+    })
+    .replace(HEAD_TAG, ($0, $1, $2) => {
+      return `<div mini-qiankun-head ${$2}div>`;
+    })
+    .replace(BODY_TAG, ($0, $1, $2) => {
+      return `<div mini-qiankun-body ${$2}div>`;
+    });
 }
 
 async function parseHTMLScript(html: string) {

@@ -19,7 +19,8 @@ order: 7
 
 - [Vue 模块](https://linyun-git.github.io/mini-qiankun-demos/vue-demo/)
 - [React 模块](https://linyun-git.github.io/mini-qiankun-demos/react-demo/)
-  子模块源码请从[这里](https://github.com/linyun-git/mini-qiankun-demos)获取。
+
+子模块源码已托管到[github](https://github.com/linyun-git/mini-qiankun-demos)上。
 
 ### 使用 iframe 嵌入页面
 
@@ -49,11 +50,60 @@ export default () => (
 
 ## 加载子应用
 
-### 从`html`入口获取代码
+### 加载入口`html`
 
-子应用最终会被部署到一个线上地址，我们可以直接从这个地址获取子应用的入口`html`文件。`html`文件中会从文件地址引入其他资源文件，但一般不包含域信息，比如`src="/index.js"`。
-不包含域信息的路径会被错误解析而从当前域（父应用所在域）请求文件，因此在获取到`html`文件后还需要将资源地址改为包含域信息的地址。
-实现代码如下。这里使用了正则表达式结合`replace`来修改资源地址，如何在 JS 中使用正则表达式可以参考[上文](./regexp-in-js)。
+子应用最终会被部署到一个线上地址，我们可以直接从这个地址获取子应用的入口`html`文件。我们可以将获取的`html`文本插入文档中以呈现子应用的`dom`结构。
+在拿到子应用入口后我们可以直接使用`fetch`去获取入口`html`，实现代码如下。
+
+```typescript
+function getEntryHTML(entry: string): Promise<string> {
+  return fetch(entry).then((rep) => rep.text());
+}
+
+getEntryHTML(
+  'https://linyun-git.github.io/mini-qiankun-demos/react-demo/',
+).then((html) => console.log(html));
+```
+
+从[React 子应用](https://linyun-git.github.io/mini-qiankun-demos/react-demo/) 获取到的`html`文本如下。
+
+```text
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <link href="/favicon.ico" rel="icon"/>
+  <meta content="width=device-width,initial-scale=1" name="viewport"/>
+  <meta content="#000000" name="theme-color"/>
+  <meta content="Web site created using create-react-app" name="description"/>
+  <link href="/logo192.png" rel="apple-touch-icon"/>
+  <link href="/manifest.json" rel="manifest"/>
+  <title>React App</title>
+  <link href="/static/css/2.4eb19277.chunk.css" rel="stylesheet">
+  <link href="/static/css/main.2f865207.chunk.css" rel="stylesheet">
+</head>
+<body>
+<noscript>You need to enable JavaScript to run this app.</noscript>
+<div id="root"></div>
+<script>
+// 省略...
+</script>
+<script src="/static/js/2.cd7f5aad.chunk.js"></script>
+<script src="/static/js/main.8eaafa86.chunk.js"></script>
+</body>
+</html>
+```
+
+### 补全引用资源地址
+
+`html`文本会通过资源地址引入其他资源文件，比如 css 和 js 文件。如果直接将获取到的`html`文本插入父应用`dom`中，浏览器也会自动解析并请求这些文件，不需要手动加载。
+但为了让浏览器正确解析仍需要对引入资源进行一些修改。
+
+#### 补全静态资源地址
+
+为了方便部署，`html`文件中引用其他资源的地址一般不是完整的`url`，而是会根据当前文档所在地址调整的相对地址。
+这会导致将子应用`html`文本插入`dom`后，浏览器会错误地根据父应用所在地址进行解析。我们需要在插入子应用`html`前将其中引用资源的相对地址替换为完整的`url`。
+实现代码如下。
 
 ```typescript
 const HREF_REG = /(href|src)=('|")(\S+?)\2/g; // 匹配指src和href属性，如 href="/favicon.ico"
@@ -78,39 +128,59 @@ async function getEntryHTML(entry: string): Promise<string> {
     return '';
   }
 }
-
-getEntryHTML('https://linyun-git.github.io/mini-qiankun-demos/react16/').then(
-  (html) => console.log(html),
-);
 ```
 
-修改资源地址后得到的`html`文件如下。
+#### 补全动态引用资源地址
 
-```text
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <link href="https://linyun-git.github.io/favicon.ico" rel="icon"/>
-  <meta content="width=device-width,initial-scale=1" name="viewport"/>
-  <meta content="#000000" name="theme-color"/>
-  <meta content="Web site created using create-react-app" name="description"/>
-  <link href="https://linyun-git.github.io/mini-qiankun-demos/react16/logo192.png" rel="apple-touch-icon"/>
-  <link href="https://linyun-git.github.io/manifest.json" rel="manifest"/>
-  <title>React App</title>
-  <link href="https://linyun-git.github.io/mini-qiankun-demos/react16/static/css/2.4eb19277.chunk.css" rel="stylesheet">
-  <link href="https://linyun-git.github.io/mini-qiankun-demos/react16/static/css/main.2f865207.chunk.css" rel="stylesheet">
-</head>
-<body>
-<noscript>You need to enable JavaScript to run this app.</noscript>
-<div id="root"></div>
-<script>
-// 省略...
-</script>
-<script src="https://linyun-git.github.io/mini-qiankun-demos/react16/static/js/2.cd7f5aad.chunk.js"></script>
-<script src="https://linyun-git.github.io/mini-qiankun-demos/react16/static/js/main.8eaafa86.chunk.js"></script>
-</body>
-</html>
+子应用中也存在不直接在`html`文件中声明，而是根据需要动态加载的资源，我们也需要对这部分地址进行补全。
+`webpack`提供了运行时修改`publicPath`的功能，更多技术细节可以查阅[webpack 文档](https://webpack.js.org/guides/public-path/#on-the-fly)。
+为了让动态引用的资源正确加载，我们需要与子应用约定：当子应用运行被父应用加载时，需要根据父应用提供的地址修改运行时`publicPath`。
+父应用实现代码如下，子应用如何修改运行时`publicPath`可以参考[这里](https://qiankun.umijs.org/zh/faq#a-%E4%BD%BF%E7%94%A8-webpack-%E8%BF%90%E8%A1%8C%E6%97%B6-publicpath-%E9%85%8D%E7%BD%AE)。
+
+```typescript
+// 修改getEntryHTML方法以在加载时修改子应用运行时publicPath。
+async function getEntryHTML(entry: string): Promise<string> {
+  try {
+    const html = await fetch(entry).then((rep) => rep.text());
+    // 绑定子应用运行时publicPath
+    window.__INJECTED_PUBLIC_PATH_BY_QIANKUN__ = entry;
+    return html.replace(HREF_REG, ($0, $1, $2, $3) => {
+      return `${$1}=${$2}${getEntirePath($3, entry)}${$2}`;
+    });
+  } catch (e) {
+    return '';
+  }
+}
+```
+
+### 替换无法解析的 dom
+
+`html`中存在一些全局只能存在一个的标签，比如`head`和`body`。由于父应用中已经存在这些标签，那么在将子应用的`html`插入`dom`时浏览器会忽略子应用的这些标签。
+为了保证子应用的`dom`结构，我们可以将这些特殊标签替换为其他标签。这里将`head`标签和`body`标签均替换为`div`，并添加特殊属性方便查询，实现代码如下。
+
+```typescript
+const HEAD_TAG = /<(head)(.*?\\)\1>/gi; // 匹配head标签
+const BODY_TAG = /<(body)(.*?\\)\1>/gi; // 匹配body标签
+
+// 修改getEntryHTML方法以在加载时替换特殊标签。
+async function getEntryHTML(entry: string): Promise<string> {
+  try {
+    const html = await fetch(entry).then((rep) => rep.text());
+    window.__INJECTED_PUBLIC_PATH_BY_QIANKUN__ = entry;
+    return html
+      .replace(HREF_REG, ($0, $1, $2, $3) => {
+        return `${$1}=${$2}${getEntirePath($3, entry)}${$2}`;
+      })
+      .replace(HEAD_TAG, ($0, $1, $2) => {
+        return `<div mini-qiankun-head ${$2} div>`;
+      })
+      .replace(BODY_TAG, ($0, $1, $2) => {
+        return `<div mini-qiankun-body ${$2} div>`;
+      });
+  } catch (e) {
+    return '';
+  }
+}
 ```
 
 ### 解析 script 标签
@@ -121,7 +191,7 @@ getEntryHTML('https://linyun-git.github.io/mini-qiankun-demos/react16/').then(
 
 ```typescript
 const ALL_SCRIPT_REGEX = /<script.*?>(.*?)<\/script>/gis; // 匹配所有script标签
-const SCRIPT_SRC_REG = /\ssrc=('|")(\S+)\1/i; // 匹配带src属性的script标签
+const SCRIPT_SRC_REG = /\ssrc=(['"])\s*?(\S+)\s*?\1/i; // 匹配带src属性的script标签
 
 /**
  * 解析html文件中的script标签，返回不包含script标签的html文本和所有script引用的代码
@@ -175,24 +245,28 @@ async function mountEntry(entry: string, container: HTMLElement) {
 }
 ```
 
-你可以通过下面的例子验证目前的代码。为了防止污染文档，该 demo 在`iframe`中运行。
+你可以通过下面的例子验证目前的代码。
 
-注：由于挂载容器与文档主体冲突，目前点击`挂载React子应用`会导致页面卡死，这是正常的，后面会给出解决方案。
+<Alert type="info">
+  注：为了防止污染文档，该 demo 仍在<code>iframe</code>中运行。可以从 demo 的选项中选择在新的标签页查看。
+</Alert>
+
+<Alert type="info">
+  注：由于挂载容器与父应用冲突，React子应用暂时无法挂载，稍后将解决。
+</Alert>
 
 <code src="./demos/qiankun-source/demo-1" iframe="true"></code>
 
 上面的 demo 已经能够成功加载子应用，但也存在一些问题：
 
 1. 同一个子应用再次挂载时会重新请求和解析资源文件。
-2. 子应用加载时，父应用的样式也发生了变化。
-3. React 子应用无法挂载。
-4. Vue 子应用可以加载，但不能切换路由。
+2. React 子应用无法挂载，但影响了父应用的样式。
 
 接下来我们将解决这些问题。
 
 ## 子应用生命周期
 
-现在，同一个子应用重新挂载时会重新请求并解析资源文件。并且子应用中的一些 JS 代码是不用重复执行的，比如全局对象`React`只需创建一次，之后挂载只需执行`render`。
+现在，每个子应用在挂载时都会请求并解析全部的资源文件，即便是子应用重新挂载时。实际上这是不必要的，子应用依赖的全局对象应该只创建一次，比如`React`，之后挂载只需重新执行`render`。
 为了解决这个问题，我们不得不让子应用做出一些更改：子应用需要导出一些生命周期函数，并让父应用在恰当的时候执行。
 基于此，我们可以将生命周期函数分为以下三种：
 
@@ -200,7 +274,7 @@ async function mountEntry(entry: string, container: HTMLElement) {
 - mount: 子应用每次挂载时执行，用于渲染 DOM。
 - unmount: 子应用卸载时执行，用于销毁挂载时创建的实例，避免内存泄露。
 
-既然确定了有哪些生命周期函数，接下来就是让主应用拿到子应用的生命周期函数。我们可以直接将子应用的生命周期函数挂载到 window 上，但这不利于规范。
+既然确定了有哪些生命周期函数，接下来就是让父应用拿到子应用的生命周期函数。我们可以直接将子应用的生命周期函数挂载到 window 上，但这不利于规范。
 一般的做法是让子应用暴露出一个模块，从模块获取子应用的生命周期函数。这里使用`umd`模块规范，如何将一个`React`应用输出为`umd`模块可以参考[这里](https://qiankun.umijs.org/zh/guide/tutorial#react-%E5%BE%AE%E5%BA%94%E7%94%A8)。
 
 ### 从子应用加载应用模块
@@ -213,28 +287,24 @@ async function mountEntry(entry: string, container: HTMLElement) {
  * @param scripts JS脚本
  */
 export function execScripts(scripts: string[]) {
-  let moduleName;
   for (let i = 0; i < scripts.length; i++) {
     const exec = new Function(scripts[i]);
-    if (i === scripts.length - 1) {
-      exec();
-      const keys = Object.keys(window);
-      moduleName = keys[keys.length - 1];
-      console.log(moduleName);
-    } else {
-      exec();
-    }
+    exec();
   }
+  const keys = Object.keys(window);
+  const moduleName = keys[keys.length - 1];
   return window[moduleName as any];
 }
 ```
 
-`webpack`会将应用及其依赖输出为多个模块，应用自身暴露出的模块通常是最后一个，这里根据`Object.keys`方法返回的键名顺序来获取最后一个被挂载到`window`上的模块。
-这种方法实际上是不可信的，因为根据浏览器实现不同，`Object.keys`返回键名的顺序可能是不同的，稍后我们将使用`Proxy`对`window`进行代理以获取最后一个被挂载的模块，这里请先忽略。
+<Alert type="info">
+  注：<code>webpack</code>会将应用及其依赖输出为多个模块，应用自身暴露出的模块通常是最后一个，这里根据<code>Object.keys</code>方法返回的顺序判断来获取最后一个被挂载到<code>window</code>上的模块，但这是不安全的。
+根据浏览器实现不同，<code>Object.keys</code>返回键名的顺序可能是不同的，稍后我们将通过代理<code>window</code>实现。
+</Alert>
 
 ### 子应用状态
 
-为了判断某一时刻应该执行子应用的哪个生命周期函数，我们需要记录子应用的状态。现将子应用分为如下状态：
+为了判断子应用应该执行哪个生命周期函数，我们需要记录子应用的状态。现将子应用分为如下状态：
 
 ```typescript
 enum APP_STATUS {
@@ -466,6 +536,8 @@ async function reroute(apps: SubApp[]) {
   await Promise.all(
     appsToLoad.map(async (app) => {
       const { template, execScripts } = await importEntry(app.entry);
+      // 将注入运行时publicPath推迟到子应用代码执行前
+      (window as any).__INJECTED_PUBLIC_PATH_BY_QIANKUN__ = app.entry;
       const module = execScripts();
       Object.assign(app, module, {
         template,
@@ -508,6 +580,572 @@ export function start() {
 
 <code src="./demos/qiankun-source/demo-2" iframe="true"></code>
 
-## 应用沙箱
+## CSS 沙箱
 
-未完待续。。
+### Shadow Dom 实现样式隔离
+
+接下来解决子应用影响父应用样式的问题。目前，子应用会被直接添加到 dom 中，包括`link`标签和`style`标签。其中的`CSS`选择器同样也会匹配到父应用中的元素。
+我们可以修改子应用样式的选择器，添加只查找子应用挂载容器内的元素。也可以使用更简洁的方法：直接将子应用挂载到[shadow dom](https://developer.mozilla.org/zh-CN/docs/Web/Web_Components/Using_shadow_DOM)下，
+`shadow dom`是一个天然的`CSS`隔离环境。其中的样式规则不会影响到外部，同时外部的样式规则也无法作用到`shadow dom`之内。这里使用`shadow dom`来实现样式隔离。
+
+我们需要修改子应用的挂载方法，并将子应用的`html`文本改为插入`shadow dom`中。具体代码如下：
+
+```typescript
+/**
+ * 创建一个包含shadow dom的节点
+ * @param template 放入shadow dom中的内容
+ */
+function createShadowRoot(template: string): HTMLDivElement {
+  const div = document.createElement('div');
+  const shadowDom = div.attachShadow({ mode: 'open' });
+  shadowDom.innerHTML = template;
+  return div;
+}
+
+// 新增数据结构，用于保存沙箱相关结构
+class Sandbox {
+  mountRoot: HTMLDivElement;
+
+  constructor(template: string) {
+    this.mountRoot = createShadowRoot(template);
+  }
+}
+
+// 修改子应用结构，将沙箱保存到子应用上
+interface SubApp {
+  name: string;
+  entry: string;
+  status: APP_STATUS;
+  template: string;
+  activeRule: string | (() => boolean);
+  container: string;
+  sandbox?: Sandbox; // 沙箱环境
+  bootstrap(): Promise<null>;
+  mount(): Promise<null>;
+  unmount(): Promise<null>;
+}
+
+// 修改reroute方法
+async function reroute(apps: SubApp[]) {
+  const { appsToUnmount, appsToLoad, appsToBootstrap, appsToMount } =
+    getAppChanges(apps);
+
+  // 执行卸载
+  // 省略。。。
+
+  // 加载资源文件
+  // 省略。。。
+
+  // 执行初始化
+  // 省略。。。
+
+  // 每次挂载沙箱节点
+  await Promise.all(
+    appsToMount.map(async (app) => {
+      if (!app.sanbox) {
+        app.sanbox = new Sandbox(app.template);
+      }
+      getContainer(app).appendChild(app.sanbox.mountRoot);
+      await app.mount();
+      Object.assign(app, {
+        status: APP_STATUS.MOUNTED,
+      });
+    }),
+  );
+}
+```
+
+### document 代理
+
+现在，我们已经成功将子应用的`html`文本插入`shadow dom`中，但此时子应用是无法挂载的，因为子应用中使用`document.querySelector`无法查询到`shadow dom`中的元素。
+可以通过以下方式解决：
+
+- 与子应用约定，当作为子应用挂载时查询挂载节点的根节点从`mount`方法传入。这很容易实现，因为挂载子应用时就是执行的子应用的`mount`方法，修改传参即可。
+- 对子应用的`document`对象进行代理，限制代理对象的查询行为。目前这种方式实现比较复杂，但对子应用影响更小。
+
+<Alert type="info">
+  注：对document对象进行代理可以解决很多问题，比如限制子应用插入新标签的位置。但qiankun并没有使用代理document的方式，而是使用更多额外逻辑去处理。
+  理由是一些极端情况下对document进行代理会产生意外，详情可以看<a href='https://github.com/umijs/qiankun/pull/846'>这里</a>。这里暂不考虑这种情况。
+</Alert>
+
+<Alert type="info">
+  注：在浏览器中，部分原生函数的执行上下文依赖于原生对象，直接通过代理对象调用时会抛出<code>Illegal invocation</code>异常，因此在返回原生函数前需要进行<code>bind</code>操作。
+</Alert>
+
+这里使用代理`document`对象的方式实现。首先，创建一个`document`对象的代理，并拦截节点查询方法。
+为了不让子应用动态插入的标签直接插入父应用中，这里同时也对获取`head`元素和`body`元素进行了拦截，返回之前替换过的一般元素。
+
+```typescript
+// 创建一个document的代理对象，并对查询节点的方法进行代理。
+function createDocumentProxy(
+  rootDom: ShadowRoot,
+  rawDocument = document,
+): Document {
+  const proxyMap = new Map();
+  proxyMap.set('getElementsByName', (name: string) =>
+    rootDom.querySelectorAll(`[name=${name}]`),
+  );
+  proxyMap.set('getElementsByClassName', (className: string) =>
+    rootDom.querySelectorAll(`.${className}`),
+  );
+  proxyMap.set('getElementsByTagName', (tagName: string) => {
+    if (tagName === 'body') {
+      return rootDom.querySelectorAll('[mini-qiankun-body]');
+    }
+    if (tagName === 'head') {
+      return rootDom.querySelectorAll('[mini-qiankun-head]');
+    }
+    return rootDom.querySelectorAll(tagName);
+  });
+  proxyMap.set('querySelector', (selector: string) => {
+    if (selector === 'body') {
+      return rootDom.querySelector('[mini-qiankun-body]');
+    }
+    if (selector === 'head') {
+      return rootDom.querySelector('[mini-qiankun-head]');
+    }
+    return rootDom.querySelector(selector);
+  });
+  proxyMap.set('body', rootDom.querySelector('[mini-qiankun-body]'));
+  proxyMap.set('head', rootDom.querySelector('[mini-qiankun-head]'));
+
+  return new Proxy(rawDocument, {
+    get(target, p, receiver) {
+      if (proxyMap.has(p)) {
+        return proxyMap.get(p);
+      }
+      if (p in rootDom) {
+        // @ts-ignore
+        const rootValue = rootDom[p];
+        if (
+          rootValue instanceof Function &&
+          !rootValue.name.startsWith('bound ')
+        ) {
+          return rootValue.bind(rootDom);
+        }
+        return rootValue;
+      }
+      // @ts-ignore
+      const rawValue = rawDocument[p];
+      // 部分原生函数的执行上下文需要是原生对象，否则会抛出 Illegal invocation 异常
+      if (rawValue instanceof Function && !rawValue.name.startsWith('bound ')) {
+        return rawValue.bind(rawDocument);
+      }
+      return rawValue;
+    },
+  });
+}
+
+// 修改沙箱，增加document代理
+class Sandbox {
+  mountRoot: HTMLDivElement;
+  documentProxy: Document;
+
+  constructor(template: string) {
+    this.mountRoot = createShadowRoot(template);
+    this.documentProxy = createDocumentProxy(this.mountRoot.shadowRoot!);
+  }
+}
+```
+
+### 子应用作用域覆盖
+
+现在，我们已经创建好了`document`代理对象，那如何让子应用使用代理对象而不是原生`document`对象呢？我们可以利用函数作用域实现。
+我们可以在一个函数作用域中执行子应用脚本，并将`document`代理添加到此作用域中以覆盖原生的`document`对象。实现代码如下。
+
+```typescript
+/**
+ * 在指定作用域中执行JS代码
+ * @param script 要执行的JS代码
+ * @param env 表示运行环境的对象，每个字段都将被添加到作用域中
+ */
+function execScript(script: string, env: any = {}) {
+  const envKeys = Object.keys(env).filter((key) => key !== 'this');
+  let exeFn = new Function(...envKeys, script);
+  // 考虑可能代理this的情况，this无法直接覆盖，单独进行处理
+  if (env.this) {
+    exeFn = exeFn.bind(env.this);
+  }
+  exeFn(...envKeys.map((key) => env[key]));
+}
+
+// 修改执行脚本的方法，每次执行均在指定作用域中进行
+export function execScripts(scripts: string[], env: any = {}) {
+  for (let i = 0; i < scripts.length; i++) {
+    execScript(scripts[i], env);
+  }
+  const keys = Object.keys(window);
+  const moduleName = keys[keys.length - 1];
+  return window[moduleName as any];
+}
+```
+
+还需在子应用加载时使用作用域覆盖。由于闭包的存在，执行子应用代码后返回的生命周期函数也受该作用域影响。
+
+```typescript
+// 修改reroute方法以在执行时使用作用域覆盖
+async function reroute(apps: SubApp[]) {
+  const { appsToUnmount, appsToLoad, appsToBootstrap, appsToMount } =
+    getAppChanges(apps);
+
+  // 执行卸载
+  // 省略。。。
+
+  // 从入口加载文件，并将执行得到的生命周期函数存到apps中
+  await Promise.all(
+    appsToLoad.map(async (app) => {
+      const { template, execScripts } = await importEntry(app.entry);
+      const documentProxy = createDocumentProxy();
+      const module = execScripts({
+        document: app.sandbox.documentProxy,
+      });
+      Object.assign(app, module, {
+        template,
+        status: APP_STATUS.NOT_BOOTSTRAPPED,
+      });
+    }),
+  );
+
+  // 执行初始化
+  // 省略。。。
+
+  // 执行挂载
+  // 省略。。。
+}
+```
+
+请通过下面的例子验证目前为止的代码。
+
+<Alert type="info">
+  注：由于对document对象进行了代理，react子应用查询到的挂载节点不再与父应用冲突，react子应用可以成功挂载。
+</Alert>
+
+<Alert type="info">
+  另外：<code>React 16.13.1</code>才支持将应用挂载到<code>shadow dom</code>下。
+  如果需要使用<code>qiankun</code>的严格隔离模式，请至少将React升级到16.13.1版本，详情请看<a href='https://github.com/facebook/react/issues/10422'>这里</a>。
+</Alert>
+
+<code src="./demos/qiankun-source/demo-3" iframe="true"></code>
+
+## JS 沙箱
+
+一般情况下，JS 应用可以安全地将一个模块挂载在全局变量上。但在微前端中并不是这样，一个子应用挂载在`window`上的全局变量可能被另一个子应用使用甚至修改。
+比如说`Mockjs`，它会拦截全部通过`XMLHttpRequest`发送的请求，在一个子应用使用了`Mockjs`时，其他子应用发送的请求也会被拦截，这可能并不是我们想要的。
+请通过上一个例子进行验证：在`vue`子应用和`react`子应用的`about`路由中都会使用`mock`模块，并将其挂载在`window`上，可以看到：`vue`子应用和`react`子应用都可以修改`mock`模块并且修改的是同一个模块。
+
+### window 代理
+
+为了解决这个问题，我们可以对`window`对象进行代理，每个子应用访问到的`window`对象均为代理对象，就像`document`代理做的那样。
+每个子应用对`window`对象做的修改都只记录在相应的代理对象上。实现代码如下。
+
+<Alert type="info">
+  注：这里只实现了<code>window</code>代理的基本内容，<code>qiankun</code>在实现中考虑了更多特殊情景。
+</Alert>
+
+```typescript
+// 修改Sandbox，增加window代理
+class Sandbox {
+  mountRoot: HTMLDivElement;
+  documentProxy: Document;
+  windowProxy: Window;
+
+  constructor(template: string) {
+    this.mountRoot = createShadowRoot(template);
+    this.documentProxy = createDocumentProxy(this.mountRoot.shadowRoot!);
+    this.windowProxy = createWindowProxy(this.documentProxy);
+  }
+}
+
+// 前面提到过，我们需要记录最后一个被设置在window上的模块，代理对象上的该属性将被视为模块名
+export const LAST_SET_NAME = '__PROXY_LAST_SET_NAME__';
+
+/**
+ * 创建一个window的代理对象
+ * @param document document代理对象
+ * @param rawWindow 原始的window对象
+ */
+function createWindowProxy(document: Document, rawWindow = window): Window {
+  const descriptorTargetMap = new Map();
+  const deletePropsSet = new Set();
+  const fakeWindow: Window = Object.create(null, {
+    document: {
+      enumerable: true,
+      value: document,
+    },
+  });
+  const proxy = new Proxy(rawWindow, {
+    get(target: Window, p: string | symbol, receiver: any): any {
+      if (p === 'window' || p === 'self' || p === 'globalThis') {
+        return proxy;
+      }
+      if (p === 'hasOwnProperty') {
+        return (key: string) =>
+          Object.prototype.hasOwnProperty.call(fakeWindow, p) ||
+          (!deletePropsSet.has(p) && rawWindow.hasOwnProperty(p));
+      }
+      if (p === 'eval') {
+        return eval;
+      }
+      if (p in fakeWindow) {
+        // @ts-ignore
+        const targetValue = fakeWindow[p];
+        if (showBind(targetValue)) {
+          return targetValue.bind(proxy);
+        }
+        return targetValue;
+      }
+      // @ts-ignore
+      const rawValue = rawWindow[p];
+      if (showBind(rawValue)) {
+        return rawValue.bind(rawWindow);
+      }
+      return rawValue;
+    },
+    set(
+      target: Window,
+      p: string | symbol,
+      value: any,
+      receiver: any,
+    ): boolean {
+      if (deletePropsSet.has(p)) {
+        deletePropsSet.delete(p);
+      }
+      // @ts-ignore
+      fakeWindow[p] = value;
+      // @ts-ignore
+      fakeWindow[LAST_SET_NAME] = p;
+      return true;
+    },
+    has(target: Window, p: string | symbol): boolean {
+      if (deletePropsSet.has(p)) {
+        return false;
+      }
+      return p in fakeWindow || p in rawWindow;
+    },
+    ownKeys(target) {
+      return [
+        ...new Set(
+          Reflect.ownKeys(rawWindow).concat(Reflect.ownKeys(fakeWindow)),
+        ),
+      ].filter((key) => !deletePropsSet.has(key));
+    },
+    deleteProperty(target: Window, p: string | symbol): boolean {
+      if (Object.prototype.hasOwnProperty.call(fakeWindow, p)) {
+        // @ts-ignore
+        return delete fakeWindow[p];
+      }
+      deletePropsSet.add(p);
+      return true;
+    },
+    defineProperty(
+      target: Window,
+      p: string | symbol,
+      attributes: PropertyDescriptor,
+    ): boolean {
+      if (deletePropsSet.has(p)) {
+        deletePropsSet.delete(p);
+      }
+      return Reflect.defineProperty(target, p, attributes);
+    },
+  });
+  return proxy;
+}
+
+/**
+ * 部分原生函数依赖于原生对象，但不能对构造函数进行bind操作，这个函数用于判断是否要进行bind操作
+ * @param value 判断是否进行bind操作的值
+ */
+function showBind(value: any) {
+  return (
+    value instanceof Function &&
+    !value.name.startsWith('bound ') &&
+    !(
+      value.prototype?.constructor === value &&
+      Object.getOwnPropertyNames(value.prototype).length > 1
+    )
+  );
+}
+```
+
+这里代理`window`对象时会将修改或添加的属性保存在`fakeWindow`对象上，而删除的属性会记录在`deletePropsSet`中。
+这样，子应用对`window`对象进行的操作就不会作用于原生对象了。此外，这里将`document`代理对象也注入了`window`代理对象，修复了通过`window.document`可以直接获取到原生`document`对象的漏洞。
+
+### 子应用作用域覆盖
+
+就像代理`document`对象时那样，我们也需要将`window`代理对象添加到子应用代码执行的作用域中。但也需要考虑更多场景。
+一般情况下，我们为`window`附加的属性可以直接作为全局变量访问，但附加到`window`代理上的属性并不具备此行为，这在一些场景下会引起一些错误。
+比如`Vue`会将自身挂载到`window`上以在其它地方访问。`with`语句允许将对象的属性添加到作用域中，我们可以使用`with`来模拟这个行为。
+此外，全局作用域中的`this`会指向`window`对象，我们可以使用`bind`进行覆盖。实现代码如下：
+
+```typescript
+// 传递给with语句的变量名
+const MINI_QIANKUN_GLOBAL_OBJECT = '__MINI_QIANKUN_GLOBAL_OBJECT__';
+
+// 修改execScript，允许指定全局对象覆盖作用域
+function execScript(script: string, env: any = {}, global: any = {}) {
+  const envKeys = Object.keys(env).filter((key) => key !== 'this');
+  let exeFn: any = () => 0;
+  // 这里需要换行，以免被注释
+  exeFn = new Function(
+    ...envKeys,
+    MINI_QIANKUN_GLOBAL_OBJECT,
+    `with(${MINI_QIANKUN_GLOBAL_OBJECT}) {\n${script}\n}`,
+  );
+  // this无法直接覆盖，单独进行处理
+  if (env['this']) {
+    exeFn = exeFn.bind(env['this']);
+  }
+  exeFn(...envKeys.map((key) => env[key]), global);
+}
+
+// 修改传参
+export function execScripts(
+  scripts: string[],
+  env: any = {},
+  global: any = {},
+) {
+  for (let i = 0; i < scripts.length; i++) {
+    execScript(scripts[i], env, global);
+  }
+  const keys = Object.keys(window);
+  const moduleName = keys[keys.length - 1];
+  return window[moduleName as any];
+}
+
+// 修改execScripts传参
+export async function importEntry(entry: string) {
+  const html = await getEntryHTML(entry);
+  const [pureHtml, scriptTextArr] = await parseHTMLScript(html);
+  return {
+    template: pureHtml,
+    execScripts: (env?: any, global?: any) =>
+      execScripts(scriptTextArr, env, global),
+  };
+}
+```
+
+在执行子应用脚本时需要将`window`代理对象添加到作用域，同时需要修改获取模块逻辑。
+
+```typescript
+// 修改reroute
+async function reroute(apps: SubApp[]) {
+  const { appsToUnmount, appsToLoad, appsToBootstrap, appsToMount } =
+    getAppChanges(apps);
+
+  // 执行卸载
+  // 省略。。。
+
+  // 从入口加载文件，并将执行得到的生命周期函数存到apps中
+  await Promise.all(
+    appsToLoad.map(async (app) => {
+      const { template, execScripts } = await importEntry(app.entry);
+      app.sandbox = new Sandbox(template);
+      (window as any).__INJECTED_PUBLIC_PATH_BY_QIANKUN__ = app.entry;
+      // 执行脚本，并将window和document代理添加到作用域
+      execScripts(
+        {
+          document: app.sandbox.documentProxy,
+          window: app.sandbox.windowProxy,
+          this: app.sandbox.windowProxy,
+        },
+        app.sandbox.windowProxy,
+      );
+      // 获取模块
+      const moduleName = app.sandbox.windowProxy[LAST_SET_NAME];
+      const module = app.sandbox.windowProxy[moduleName];
+      Object.assign(app, module, {
+        template,
+        status: APP_STATUS.NOT_BOOTSTRAPPED,
+      });
+    }),
+  );
+
+  // 执行初始化
+  // 省略。。。
+
+  // 执行挂载
+  // 省略。。。
+}
+```
+
+### 动态脚本作用域覆盖
+
+目前，子应用的脚本会在指定作用域中执行。但子应用可能会动态向`dom`插入脚本，默认情况下，这些脚本会在全局作用域中执行。
+我们需要拦截插入的脚本，并在给定的作用域中执行。实现代码如下：
+
+```typescript
+const SCRIPT_TAG_REG = /^script$/i; // 匹配script标签
+
+/**
+ * 对执行dom进行拦截
+ * @param dom 要拦截标签插入的元素
+ * @param env 执行脚本的作用域
+ * @param global 执行脚本时使用的全局对象
+ */
+export function interceptScript(dom: HTMLElement, env: any, global: any) {
+  const rawAppendChild = dom.appendChild;
+  dom.appendChild = function (child: any) {
+    const tagName = child.nodeName;
+    if (SCRIPT_TAG_REG.test(tagName)) {
+      // 将拦截到的script标签替换为注释
+      const newChild = new Comment(child.outerHTML);
+      rawAppendChild.call(dom, newChild);
+      // 解析标签并在指定作用域中执行
+      parseHTMLScript(child.outerHTML).then(([pureHtml, scripts]) => {
+        execScripts(scripts, env, global);
+      });
+    } else {
+      rawAppendChild.call(dom, child);
+    }
+    return child;
+  };
+}
+```
+
+添加拦截器的代码如下。
+
+```typescript
+// 修改Sandbox以在创建时添加动态脚本拦截器
+class Sandbox {
+  mountRoot: HTMLDivElement;
+  documentProxy: Document;
+  windowProxy: Window;
+
+  constructor(template: string) {
+    this.mountRoot = createShadowRoot(template);
+    this.documentProxy = createDocumentProxy(this.mountRoot.shadowRoot!);
+    this.windowProxy = createWindowProxy(this.documentProxy);
+    // 对body进行拦截
+    interceptScript(
+      this.documentProxy.body,
+      {
+        document: this.documentProxy,
+        window: this.windowProxy,
+        this: this.windowProxy,
+      },
+      this.windowProxy,
+    );
+    // 对head进行拦截
+    interceptScript(
+      this.documentProxy.head,
+      {
+        document: this.documentProxy,
+        window: this.windowProxy,
+        this: this.windowProxy,
+      },
+      this.windowProxy,
+    );
+  }
+}
+```
+
+对`window`对象进行代理已基本实现，请通过下面的例子进行验证。不难发现：`vue`子应用使用的`mock`模块与`react`子应用使用的`mock`模块之间不再关联。
+
+<code src="./demos/qiankun-source/demo-4" iframe="true"></code>
+
+## 总结
+
+本文对`qiankun`提供的微前端功能进行了介绍，包括提供子应用加载的`html`加载入口、提供子应用自动切换的子应用生命周期管理、提供子应用样式隔离的 CSS 沙箱，以及实现子应用全局变量隔离的 JS 沙箱，并提供了实现示例。
+本文也介绍了这种微前端实现下对子应用的要求及其原因，包括：子应用必须支持运行时`publicPath`以加载动态资源、子应用必须导出生命周期函数以实现应用切换、`React`子应用至少为`React 16.13.1`版本以挂载到`shadow dom`下等。
+此外，`qiankun`在实现时使用[import-html-entry](https://github.com/kuitos/import-html-entry)提供了`html`加载入口的功能，使用[single-spa](https://github.com/single-spa/single-spa)提供了子应用生命周期管理的功能，
+`qiankun`自身则提供了样式隔离、子应用运行环境隔离、资源预加载和全局状态管理的功能。本文无关不同项目模块，从整体上介绍了`qiankun`提供微前端服务的原理。
