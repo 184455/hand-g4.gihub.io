@@ -22,7 +22,7 @@ $ yarn # 不推荐使用npm
 $ npm start
 ```
 
-这个时候打开 [http://localhost:8001/hand-g4.gihub.io/](http://localhost:8001/hand-g4.gihub.io/) 就能看到页面。
+这个时候打开 [http://localhost:8000/hand-g4.gihub.io/](http://localhost:8000/hand-g4.gihub.io/) 就能看到页面。
 
 4、打包页面
 
